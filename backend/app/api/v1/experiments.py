@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -79,6 +79,19 @@ def experiment_report(experiment_id: str, db: Session = Depends(get_db)):
     report['status'] = experiment.status
     SnapshotService.create_snapshot(db, experiment_id, report)
     return report
+
+
+@router.get('/{experiment_id}/export')
+def export_experiment_report(
+    experiment_id: str,
+    format: str = Query(default='json'),
+    db: Session = Depends(get_db),
+):
+    experiment = ExperimentService.get_experiment(db, experiment_id)
+    report = ExperimentService.build_report(db, experiment)
+    payload = ExperimentService.export_report_payload(report, format)
+    media_type = 'application/json' if format == 'json' else 'text/csv'
+    return Response(content=payload, media_type=media_type)
 
 
 @router.get('/{experiment_id}/snapshots', response_model=list[ReportSnapshotResponse])
