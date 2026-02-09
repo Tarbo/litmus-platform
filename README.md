@@ -10,7 +10,7 @@ Litmus is a full-stack experimentation platform for running A/B tests, A/B/n tes
 
 - **Experiment Management** — Create, configure, and manage A/B and multivariate experiments
 - **Traffic Allocation** — Flexible traffic splitting with percentage-based controls
-- **User Assignment** — Deterministic bucketing with Redis caching
+- **User Assignment** — Thompson Sampling adaptive assignment with live posterior diagnostics
 - **Event Tracking** — High-throughput event ingestion with TimescaleDB
 - **Real-time Dashboard** — Live metrics via WebSocket + Redis Pub/Sub
 - **Statistical Analysis** — T-tests, chi-squared tests, confidence intervals
@@ -56,6 +56,21 @@ litmus-platform/
 │
 └── scripts/            # Utility scripts
 ```
+
+## Run The App (Docker Compose)
+
+You can run the full stack and preview the UI now:
+
+```bash
+docker compose up --build
+```
+
+Endpoints:
+- Frontend UI: `http://localhost:3000`
+- Backend API: `http://localhost:8000`
+- Health: `http://localhost:8000/health`
+- Readiness: `http://localhost:8000/ready`
+- Metrics: `http://localhost:8000/metrics`
 
 ## License
 

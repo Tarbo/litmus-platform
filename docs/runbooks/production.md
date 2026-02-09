@@ -15,17 +15,19 @@
 ## 3. Incident triage
 1. Identify failing endpoint and capture `X-Request-ID` from response.
 2. Search logs for matching request id.
-3. If 429 spikes appear, evaluate traffic pattern and temporary limit increase.
-4. If 401 spikes appear, verify token rotation/distribution.
-5. If report decisions look wrong, inspect decision history endpoint and snapshots.
+3. Check `/metrics` for status-code spikes and top endpoint pressure.
+4. If 429 spikes appear, evaluate traffic pattern and temporary limit increase.
+5. If 401 spikes appear, verify token rotation/distribution.
+6. If report decisions look wrong, inspect decision history endpoint and snapshots.
 
 ## 4. Rollback
 1. Revert to previous release commit.
 2. Restart backend workers and API.
-3. Validate `/health` and key read endpoints.
+3. Validate `/health`, `/ready`, and key read endpoints.
 4. Run smoke checks:
    - fetch experiment list
    - fetch one report
+   - check `/metrics` increments for expected routes
    - validate frontend build/deploy status
 
 ## 5. Post-incident
