@@ -105,3 +105,14 @@ export interface GuardrailMetric {
   status: 'healthy' | 'breached';
   observed_at: string;
 }
+
+export interface DecisionAudit {
+  id: string;
+  experiment_id: string;
+  previous_status: string;
+  new_status: string;
+  reason: string | null;
+  source: 'auto' | 'manual';
+  actor: string;
+  created_at: string;
+}

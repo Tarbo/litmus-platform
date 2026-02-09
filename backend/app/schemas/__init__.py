@@ -1,4 +1,5 @@
 from app.schemas.analysis import AssignmentRequest, AssignmentResponse
+from app.schemas.decision import DecisionAuditResponse, DecisionOverrideRequest
 from app.schemas.event import EventCreate, EventResponse
 from app.schemas.experiment import (
     CondensedPerformance,
@@ -17,6 +18,8 @@ __all__ = [
     'AssignmentResponse',
     'EventCreate',
     'EventResponse',
+    'DecisionOverrideRequest',
+    'DecisionAuditResponse',
     'CondensedPerformance',
     'ExecutiveSummary',
     'ExperimentCreate',
