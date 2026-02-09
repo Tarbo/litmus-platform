@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import Base
@@ -15,6 +15,9 @@ class DecisionSource(str, enum.Enum):
 
 class DecisionAudit(Base):
     __tablename__ = 'decision_audits'
+    __table_args__ = (
+        Index('ix_decision_audits_experiment_created', 'experiment_id', 'created_at'),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     experiment_id: Mapped[str] = mapped_column(ForeignKey('experiments.id', ondelete='CASCADE'), index=True)

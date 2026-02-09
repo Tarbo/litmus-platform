@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Float, ForeignKey, String
+from sqlalchemy import Float, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base, TimestampMixin
@@ -8,6 +8,9 @@ from app.models import Base, TimestampMixin
 
 class Event(Base, TimestampMixin):
     __tablename__ = 'events'
+    __table_args__ = (
+        Index('ix_events_experiment_period_type', 'experiment_id', 'period', 'event_type'),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     experiment_id: Mapped[str] = mapped_column(ForeignKey('experiments.id', ondelete='CASCADE'), index=True)

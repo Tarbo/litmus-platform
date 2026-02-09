@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     api_v1_prefix: str = '/api/v1'
     database_url: str = 'sqlite:///./litmus.db'
     environment: str = 'development'
+    admin_api_tokens: str = ''
+    rate_limit_per_minute: int = 120
+    log_level: str = 'INFO'
 
 
 settings = Settings()

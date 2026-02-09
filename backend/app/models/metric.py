@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, String
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import Base
@@ -20,6 +20,9 @@ class GuardrailStatus(str, enum.Enum):
 
 class Metric(Base):
     __tablename__ = 'metrics'
+    __table_args__ = (
+        Index('ix_metrics_experiment_name_observed', 'experiment_id', 'name', 'observed_at'),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     experiment_id: Mapped[str] = mapped_column(ForeignKey('experiments.id', ondelete='CASCADE'), index=True)
