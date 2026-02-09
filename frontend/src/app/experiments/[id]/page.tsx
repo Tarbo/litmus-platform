@@ -60,10 +60,45 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
           <p>Control CR: {(report.control_conversion_rate * 100).toFixed(2)}%</p>
           <p>Treatment CR: {(report.treatment_conversion_rate * 100).toFixed(2)}%</p>
           <p>Uplift: {(report.uplift_vs_control * 100).toFixed(2)}%</p>
+          <p>
+            Uplift 95% CI: {(report.uplift_ci_lower * 100).toFixed(2)}% to {(report.uplift_ci_upper * 100).toFixed(2)}%
+          </p>
+          <p>p-value: {report.p_value.toFixed(4)}</p>
           <p>Confidence: {(report.confidence * 100).toFixed(1)}%</p>
+          <p>Recommendation: <span className="badge">{report.recommendation}</span></p>
           <p>Sample Progress: {(report.sample_progress * 100).toFixed(1)}%</p>
           <p>Diff-in-Diff Delta: {report.diff_in_diff_delta === null ? 'N/A (advanced mode)' : report.diff_in_diff_delta}</p>
           <p className="muted">Last Updated: {new Date(report.last_updated_at).toLocaleString()}</p>
+        </div>
+      )}
+
+      {report && (
+        <div className="card">
+          <h3>Variant Performance (Pre/Post)</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left' }}>Variant</th>
+                  <th style={{ textAlign: 'left' }}>Post Exposures</th>
+                  <th style={{ textAlign: 'left' }}>Post CR</th>
+                  <th style={{ textAlign: 'left' }}>Pre Exposures</th>
+                  <th style={{ textAlign: 'left' }}>Pre CR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.variant_performance.map((variant) => (
+                  <tr key={variant.variant_id}>
+                    <td>{variant.variant_name}</td>
+                    <td>{variant.post_exposures}</td>
+                    <td>{(variant.post_conversion_rate * 100).toFixed(2)}%</td>
+                    <td>{variant.pre_exposures}</td>
+                    <td>{(variant.pre_conversion_rate * 100).toFixed(2)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

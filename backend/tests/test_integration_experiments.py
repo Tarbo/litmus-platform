@@ -52,10 +52,34 @@ def test_experiment_lifecycle_terminate_releases_assignments(tmp_path):
                 value=1,
             ),
         )
+        EventService.ingest_event(
+            db,
+            EventCreate(
+                experiment_id=experiment.id,
+                user_id='u-1',
+                variant_id=assignment.variant_id,
+                event_type='exposure',
+                period='pre',
+                value=1,
+            ),
+        )
+        EventService.ingest_event(
+            db,
+            EventCreate(
+                experiment_id=experiment.id,
+                user_id='u-1',
+                variant_id=assignment.variant_id,
+                event_type='conversion',
+                period='pre',
+                value=1,
+            ),
+        )
 
         report = ExperimentService.build_report(db, ExperimentService.get_experiment(db, experiment.id))
         assert report['exposures'] == 1
         assert report['conversions'] == 1
+        assert 'p_value' in report
+        assert 'variant_performance' in report
 
         terminated = ExperimentService.terminate_experiment(db, experiment.id, 'manual stop from operations')
         assert terminated.status.value == 'terminated_without_cause'

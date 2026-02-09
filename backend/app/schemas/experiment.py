@@ -80,7 +80,12 @@ class ExperimentReport(BaseModel):
     control_conversion_rate: float
     treatment_conversion_rate: float
     uplift_vs_control: float
+    uplift_ci_lower: float
+    uplift_ci_upper: float
+    p_value: float
     confidence: float
+    recommendation: str
     estimated_days_to_decision: int | None
     diff_in_diff_delta: float | None
+    variant_performance: list[dict]
     last_updated_at: datetime

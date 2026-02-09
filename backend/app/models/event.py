@@ -14,6 +14,7 @@ class Event(Base, TimestampMixin):
     user_id: Mapped[str] = mapped_column(String(120), index=True)
     variant_id: Mapped[str | None] = mapped_column(ForeignKey('variants.id', ondelete='SET NULL'), nullable=True)
     event_type: Mapped[str] = mapped_column(String(50), index=True)
+    period: Mapped[str] = mapped_column(String(20), default='post', index=True)
     value: Mapped[float] = mapped_column(Float, default=1.0)
 
     experiment = relationship('Experiment', back_populates='events')
