@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_db, require_write_access
 from app.schemas.experiment import (
     CondensedPerformance,
     ExecutiveSummary,
@@ -22,7 +22,11 @@ router = APIRouter(prefix='/experiments', tags=['experiments'])
 
 
 @router.post('', response_model=ExperimentResponse)
-def create_experiment(payload: ExperimentCreate, db: Session = Depends(get_db)):
+def create_experiment(
+    payload: ExperimentCreate,
+    db: Session = Depends(get_db),
+    _auth: None = Depends(require_write_access),
+):
     return ExperimentService.create_experiment(db, payload)
 
 
@@ -47,7 +51,12 @@ def get_experiment(experiment_id: str, db: Session = Depends(get_db)):
 
 
 @router.post('/{experiment_id}/terminate', response_model=ExperimentResponse)
-def terminate_experiment(experiment_id: str, payload: ExperimentStatusUpdate, db: Session = Depends(get_db)):
+def terminate_experiment(
+    experiment_id: str,
+    payload: ExperimentStatusUpdate,
+    db: Session = Depends(get_db),
+    _auth: None = Depends(require_write_access),
+):
     return ExperimentService.terminate_experiment(db, experiment_id, payload.reason)
 
 
@@ -56,6 +65,7 @@ def override_experiment_decision(
     experiment_id: str,
     payload: DecisionOverrideRequest,
     db: Session = Depends(get_db),
+    _auth: None = Depends(require_write_access),
 ):
     return ExperimentService.override_status(
         db=db,
