@@ -126,6 +126,46 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
         </div>
       )}
 
+      {report && (
+        <div className="card">
+          <h3>Bandit Live State</h3>
+          <p>
+            Assignment Policy: <span className="badge">{report.assignment_policy}</span>
+          </p>
+          {report.bandit_state.length === 0 && <p className="muted">No bandit diagnostics available yet.</p>}
+          {report.bandit_state.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left' }}>Variant</th>
+                    <th style={{ textAlign: 'left' }}>Exposures</th>
+                    <th style={{ textAlign: 'left' }}>Conversions</th>
+                    <th style={{ textAlign: 'left' }}>Posterior a/b</th>
+                    <th style={{ textAlign: 'left' }}>Expected CR</th>
+                    <th style={{ textAlign: 'left' }}>Win Prob.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.bandit_state.map((state) => (
+                    <tr key={state.variant_id}>
+                      <td>{state.variant_name}</td>
+                      <td>{state.exposures}</td>
+                      <td>{state.conversions}</td>
+                      <td>
+                        {state.alpha.toFixed(2)} / {state.beta.toFixed(2)}
+                      </td>
+                      <td>{(state.expected_rate * 100).toFixed(2)}%</td>
+                      <td>{(state.win_probability * 100).toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="card">
         <h3>Log Guardrail Metric</h3>
         <label htmlFor="guardrail-name">Metric Name</label>
