@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import case, func, select
@@ -18,6 +18,10 @@ from app.models.variant import Variant
 from app.schemas.experiment import ExperimentCreate
 
 
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class ExperimentService:
     @staticmethod
     def create_experiment(db: Session, payload: ExperimentCreate) -> Experiment:
@@ -31,7 +35,7 @@ class ExperimentService:
             power=payload.power,
             sample_size_required=sample_size,
             status=ExperimentStatus.running,
-            started_at=datetime.utcnow(),
+            started_at=utc_now(),
         )
         db.add(experiment)
         db.flush()
@@ -70,9 +74,9 @@ class ExperimentService:
 
         experiment.status = ExperimentStatus.terminated_without_cause
         experiment.termination_reason = reason or 'Terminated manually from UI'
-        experiment.ended_at = datetime.utcnow()
+        experiment.ended_at = utc_now()
 
-        release_time = datetime.utcnow()
+        release_time = utc_now()
         db.query(Assignment).filter(
             Assignment.experiment_id == experiment_id,
             Assignment.released_at.is_(None),
@@ -238,7 +242,7 @@ class ExperimentService:
             'estimated_days_to_decision': None if exposures == 0 else max(0, int((experiment.sample_size_required - exposures) / 200)),
             'diff_in_diff_delta': did_delta,
             'variant_performance': variant_performance,
-            'last_updated_at': datetime.utcnow(),
+            'last_updated_at': utc_now(),
         }
 
     @staticmethod
