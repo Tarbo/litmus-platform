@@ -12,10 +12,12 @@ from app.core.statistics import (
     uplift_confidence_interval,
 )
 from app.models.assignment import Assignment
+from app.models.decision_audit import DecisionSource
 from app.models.event import Event
 from app.models.experiment import Experiment, ExperimentStatus
 from app.models.metric import GuardrailStatus, Metric
 from app.models.variant import Variant
+from app.services.decision_service import DecisionService
 from app.schemas.experiment import ExperimentCreate
 
 
@@ -280,6 +282,7 @@ class ExperimentService:
         if report['sample_progress'] < 1:
             return experiment
 
+        previous_status = experiment.status
         recommendation = report['recommendation']
         if recommendation == 'pass':
             experiment.status = ExperimentStatus.passed
@@ -288,6 +291,44 @@ class ExperimentService:
         else:
             experiment.status = ExperimentStatus.inconclusive
         experiment.ended_at = utc_now()
+        DecisionService.record_decision(
+            db=db,
+            experiment=experiment,
+            previous_status=previous_status,
+            new_status=experiment.status,
+            reason=f'Auto transition from recommendation={recommendation}',
+            source=DecisionSource.auto,
+            actor='system',
+        )
+        db.commit()
+        db.refresh(experiment)
+        return experiment
+
+    @staticmethod
+    def override_status(
+        db: Session,
+        experiment_id: str,
+        new_status: ExperimentStatus,
+        reason: str | None,
+        actor: str,
+    ) -> Experiment:
+        experiment = ExperimentService.get_experiment(db, experiment_id)
+        previous_status = experiment.status
+        if previous_status == new_status:
+            return experiment
+
+        experiment.status = new_status
+        if new_status != ExperimentStatus.running:
+            experiment.ended_at = utc_now()
+        DecisionService.record_decision(
+            db=db,
+            experiment=experiment,
+            previous_status=previous_status,
+            new_status=new_status,
+            reason=reason,
+            source=DecisionSource.manual,
+            actor=actor,
+        )
         db.commit()
         db.refresh(experiment)
         return experiment

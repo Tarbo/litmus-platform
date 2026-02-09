@@ -8,6 +8,7 @@ from app.db.init_db import init_db
 from app.db.session import build_sessionmaker
 from app.models import Base  # noqa: F401
 from app.models.assignment import Assignment  # noqa: F401
+from app.models.decision_audit import DecisionAudit  # noqa: F401
 from app.models.event import Event  # noqa: F401
 from app.models.experiment import Experiment  # noqa: F401
 from app.models.metric import Metric  # noqa: F401

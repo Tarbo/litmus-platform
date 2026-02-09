@@ -12,7 +12,9 @@ from app.schemas.experiment import (
     ExperimentResponse,
     ExperimentStatusUpdate,
 )
+from app.schemas.decision import DecisionAuditResponse, DecisionOverrideRequest
 from app.schemas.snapshot import ReportSnapshotResponse
+from app.services.decision_service import DecisionService
 from app.services.experiment_service import ExperimentService
 from app.services.snapshot_service import SnapshotService
 
@@ -47,6 +49,26 @@ def get_experiment(experiment_id: str, db: Session = Depends(get_db)):
 @router.post('/{experiment_id}/terminate', response_model=ExperimentResponse)
 def terminate_experiment(experiment_id: str, payload: ExperimentStatusUpdate, db: Session = Depends(get_db)):
     return ExperimentService.terminate_experiment(db, experiment_id, payload.reason)
+
+
+@router.post('/{experiment_id}/decision', response_model=ExperimentResponse)
+def override_experiment_decision(
+    experiment_id: str,
+    payload: DecisionOverrideRequest,
+    db: Session = Depends(get_db),
+):
+    return ExperimentService.override_status(
+        db=db,
+        experiment_id=experiment_id,
+        new_status=payload.status,
+        reason=payload.reason,
+        actor=payload.actor,
+    )
+
+
+@router.get('/{experiment_id}/decision-history', response_model=list[DecisionAuditResponse])
+def decision_history(experiment_id: str, db: Session = Depends(get_db)):
+    return DecisionService.list_decisions(db, experiment_id)
 
 
 @router.get('/{experiment_id}/report', response_model=ExperimentReport)
