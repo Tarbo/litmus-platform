@@ -360,3 +360,42 @@ class ExperimentService:
                 }
             )
         return cards
+
+    @staticmethod
+    def export_report_payload(report: dict, fmt: str) -> str:
+        if fmt == 'json':
+            import json
+
+            serializable = dict(report)
+            serializable['status'] = report['status'].value if hasattr(report['status'], 'value') else report['status']
+            serializable['last_updated_at'] = (
+                report['last_updated_at'].isoformat()
+                if hasattr(report['last_updated_at'], 'isoformat')
+                else report['last_updated_at']
+            )
+            return json.dumps(serializable, indent=2)
+
+        if fmt == 'csv':
+            headers = [
+                'experiment_id',
+                'status',
+                'recommendation',
+                'sample_progress',
+                'confidence',
+                'p_value',
+                'uplift_vs_control',
+                'guardrails_breached',
+            ]
+            values = [
+                str(report['experiment_id']),
+                str(report['status'].value if hasattr(report['status'], 'value') else report['status']),
+                str(report['recommendation']),
+                str(report['sample_progress']),
+                str(report['confidence']),
+                str(report['p_value']),
+                str(report['uplift_vs_control']),
+                str(report['guardrails_breached']),
+            ]
+            return ','.join(headers) + '\n' + ','.join(values) + '\n'
+
+        raise HTTPException(status_code=400, detail='format must be one of: json, csv')
