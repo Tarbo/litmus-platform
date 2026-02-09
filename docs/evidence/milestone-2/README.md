@@ -5,7 +5,7 @@
 1. Backend tests
 ```bash
 cd /Users/ezeme.okwudili/Desktop/litmus-platform/backend
-./venv3.12/bin/pytest -q
+./venv3.12/bin/pytest -q -W error::DeprecationWarning
 ```
 
 2. Frontend build check
@@ -28,4 +28,5 @@ PY
 - `sample-report.json`: generated example of the full progress report payload.
 
 ## Notes
-- `frontend-build.txt` currently shows `next: command not found` in this machine state because frontend dependencies are not installed in the working tree.
+- Frontend dependencies are installed and `frontend-build.txt` shows a successful `next build`.
+- Backend test command treats deprecations as errors to prevent warning regressions.
