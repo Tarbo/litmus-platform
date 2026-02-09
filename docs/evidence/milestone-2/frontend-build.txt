@@ -2,4 +2,31 @@
 > litmus-frontend@0.1.0 build
 > next build
 
-sh: next: command not found
+▲ Next.js 16.1.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 866.1ms
+  Running TypeScript ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/7) ...
+  Generating static pages using 1 worker (1/7) 
+  Generating static pages using 1 worker (3/7) 
+  Generating static pages using 1 worker (5/7) 
+✓ Generating static pages using 1 worker (7/7) in 63.8ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /experiments
+├ ƒ /experiments/[id]
+├ ƒ /experiments/[id]/results
+├ ƒ /experiments/[id]/settings
+├ ○ /experiments/new
+├ ○ /metrics
+└ ○ /reports
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
