@@ -12,6 +12,7 @@ class EventService:
             user_id=payload.user_id,
             variant_id=payload.variant_id,
             event_type=payload.event_type,
+            period=payload.period,
             value=payload.value,
         )
         db.add(event)

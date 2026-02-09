@@ -4,7 +4,13 @@ from fastapi import HTTPException
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.statistics import approximate_confidence, calculate_sample_size
+from app.core.statistics import (
+    calculate_sample_size,
+    confidence_from_p_value,
+    diff_in_diff,
+    two_proportion_z_test,
+    uplift_confidence_interval,
+)
 from app.models.assignment import Assignment
 from app.models.event import Event
 from app.models.experiment import Experiment, ExperimentStatus
@@ -96,16 +102,17 @@ class ExperimentService:
             select(
                 func.count(case((Event.event_type == 'exposure', 1))).label('exposures'),
                 func.count(case((Event.event_type == 'conversion', 1))).label('conversions'),
-            ).where(Event.experiment_id == experiment_id)
+            ).where(Event.experiment_id == experiment_id, Event.period == 'post')
         ).one()
 
     @staticmethod
-    def _variant_conversion_rate(db: Session, experiment_id: str, variant_id: str) -> float:
+    def _variant_counts(db: Session, experiment_id: str, variant_id: str, period: str = 'post') -> tuple[int, int]:
         exposure = db.scalar(
             select(func.count(Event.id)).where(
                 Event.experiment_id == experiment_id,
                 Event.variant_id == variant_id,
                 Event.event_type == 'exposure',
+                Event.period == period,
             )
         )
         conversion = db.scalar(
@@ -113,11 +120,10 @@ class ExperimentService:
                 Event.experiment_id == experiment_id,
                 Event.variant_id == variant_id,
                 Event.event_type == 'conversion',
+                Event.period == period,
             )
         )
-        if not exposure:
-            return 0.0
-        return conversion / exposure
+        return exposure or 0, conversion or 0
 
     @staticmethod
     def build_report(db: Session, experiment: Experiment) -> dict:
@@ -127,14 +133,92 @@ class ExperimentService:
         variants = experiment.variants
         control_rate = 0.0
         treatment_rate = 0.0
-        if variants:
-            control_rate = ExperimentService._variant_conversion_rate(db, experiment.id, variants[0].id)
-            if len(variants) > 1:
-                treatment_rates = [ExperimentService._variant_conversion_rate(db, experiment.id, v.id) for v in variants[1:]]
-                treatment_rate = sum(treatment_rates) / len(treatment_rates)
+        did_delta = None
+        p_value = 1.0
+        uplift_ci_lower = 0.0
+        uplift_ci_upper = 0.0
+        recommendation = 'continue_collecting'
+        variant_performance = []
 
-        uplift = treatment_rate - control_rate
-        confidence = approximate_confidence(exposures, conversions, experiment.mde)
+        if variants:
+            control = variants[0]
+            control_post_exposure, control_post_conversion = ExperimentService._variant_counts(
+                db, experiment.id, control.id, period='post'
+            )
+            control_pre_exposure, control_pre_conversion = ExperimentService._variant_counts(
+                db, experiment.id, control.id, period='pre'
+            )
+            control_rate = (control_post_conversion / control_post_exposure) if control_post_exposure else 0.0
+            control_pre_rate = (control_pre_conversion / control_pre_exposure) if control_pre_exposure else 0.0
+
+            treatment_post_exposure = 0
+            treatment_post_conversion = 0
+            treatment_pre_exposure = 0
+            treatment_pre_conversion = 0
+
+            for variant in variants:
+                post_exposure, post_conversion = ExperimentService._variant_counts(db, experiment.id, variant.id, period='post')
+                pre_exposure, pre_conversion = ExperimentService._variant_counts(db, experiment.id, variant.id, period='pre')
+                post_rate = (post_conversion / post_exposure) if post_exposure else 0.0
+                pre_rate = (pre_conversion / pre_exposure) if pre_exposure else 0.0
+                variant_performance.append(
+                    {
+                        'variant_id': variant.id,
+                        'variant_name': variant.name,
+                        'post_exposures': post_exposure,
+                        'post_conversions': post_conversion,
+                        'post_conversion_rate': round(post_rate, 4),
+                        'pre_exposures': pre_exposure,
+                        'pre_conversions': pre_conversion,
+                        'pre_conversion_rate': round(pre_rate, 4),
+                    }
+                )
+                if variant.id != control.id:
+                    treatment_post_exposure += post_exposure
+                    treatment_post_conversion += post_conversion
+                    treatment_pre_exposure += pre_exposure
+                    treatment_pre_conversion += pre_conversion
+
+            treatment_rate = (treatment_post_conversion / treatment_post_exposure) if treatment_post_exposure else 0.0
+            treatment_pre_rate = (treatment_pre_conversion / treatment_pre_exposure) if treatment_pre_exposure else 0.0
+
+            uplift = treatment_rate - control_rate
+            z_result = two_proportion_z_test(
+                control_conversions=control_post_conversion,
+                control_exposures=control_post_exposure,
+                treatment_conversions=treatment_post_conversion,
+                treatment_exposures=treatment_post_exposure,
+            )
+            p_value = z_result.p_value
+            ci = uplift_confidence_interval(
+                control_conversions=control_post_conversion,
+                control_exposures=control_post_exposure,
+                treatment_conversions=treatment_post_conversion,
+                treatment_exposures=treatment_post_exposure,
+            )
+            uplift_ci_lower = ci.lower
+            uplift_ci_upper = ci.upper
+
+            if control_pre_exposure > 0 and treatment_pre_exposure > 0:
+                did_delta = diff_in_diff(
+                    pre_control_rate=control_pre_rate,
+                    post_control_rate=control_rate,
+                    pre_treatment_rate=treatment_pre_rate,
+                    post_treatment_rate=treatment_rate,
+                )
+
+            if sample_progress < 1:
+                recommendation = 'continue_collecting'
+            elif p_value <= experiment.alpha and uplift >= experiment.mde:
+                recommendation = 'pass'
+            elif p_value <= experiment.alpha and uplift < 0:
+                recommendation = 'fail'
+            else:
+                recommendation = 'inconclusive'
+        else:
+            uplift = 0.0
+
+        confidence = confidence_from_p_value(p_value)
         return {
             'experiment_id': experiment.id,
             'status': experiment.status,
@@ -146,9 +230,14 @@ class ExperimentService:
             'control_conversion_rate': round(control_rate, 4),
             'treatment_conversion_rate': round(treatment_rate, 4),
             'uplift_vs_control': round(uplift, 4),
+            'uplift_ci_lower': round(uplift_ci_lower, 4),
+            'uplift_ci_upper': round(uplift_ci_upper, 4),
+            'p_value': round(p_value, 6),
             'confidence': confidence,
+            'recommendation': recommendation,
             'estimated_days_to_decision': None if exposures == 0 else max(0, int((experiment.sample_size_required - exposures) / 200)),
-            'diff_in_diff_delta': None,
+            'diff_in_diff_delta': did_delta,
+            'variant_performance': variant_performance,
             'last_updated_at': datetime.utcnow(),
         }
 
