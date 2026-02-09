@@ -8,6 +8,8 @@ from app.schemas.experiment import (
     ExperimentResponse,
     ExperimentStatusUpdate,
 )
+from app.schemas.metric import GuardrailMetricCreate, GuardrailMetricResponse
+from app.schemas.snapshot import ReportSnapshotResponse
 from app.schemas.variant import VariantCreate, VariantResponse
 
 __all__ = [
@@ -21,6 +23,9 @@ __all__ = [
     'ExperimentReport',
     'ExperimentResponse',
     'ExperimentStatusUpdate',
+    'GuardrailMetricCreate',
+    'GuardrailMetricResponse',
+    'ReportSnapshotResponse',
     'VariantCreate',
     'VariantResponse',
 ]

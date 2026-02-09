@@ -14,6 +14,7 @@ from app.core.statistics import (
 from app.models.assignment import Assignment
 from app.models.event import Event
 from app.models.experiment import Experiment, ExperimentStatus
+from app.models.metric import GuardrailStatus, Metric
 from app.models.variant import Variant
 from app.schemas.experiment import ExperimentCreate
 
@@ -143,6 +144,8 @@ class ExperimentService:
         uplift_ci_upper = 0.0
         recommendation = 'continue_collecting'
         variant_performance = []
+        guardrails = ExperimentService._latest_guardrails(db, experiment.id)
+        guardrails_breached = sum(1 for g in guardrails if g['status'] == GuardrailStatus.breached.value)
 
         if variants:
             control = variants[0]
@@ -213,6 +216,8 @@ class ExperimentService:
 
             if sample_progress < 1:
                 recommendation = 'continue_collecting'
+            elif guardrails_breached > 0:
+                recommendation = 'fail'
             elif p_value <= experiment.alpha and uplift >= experiment.mde:
                 recommendation = 'pass'
             elif p_value <= experiment.alpha and uplift < 0:
@@ -239,11 +244,53 @@ class ExperimentService:
             'p_value': round(p_value, 6),
             'confidence': confidence,
             'recommendation': recommendation,
+            'guardrails_breached': guardrails_breached,
+            'guardrails': guardrails,
             'estimated_days_to_decision': None if exposures == 0 else max(0, int((experiment.sample_size_required - exposures) / 200)),
             'diff_in_diff_delta': did_delta,
             'variant_performance': variant_performance,
             'last_updated_at': utc_now(),
         }
+
+    @staticmethod
+    def _latest_guardrails(db: Session, experiment_id: str) -> list[dict]:
+        metrics = db.scalars(
+            select(Metric).where(Metric.experiment_id == experiment_id).order_by(Metric.observed_at.desc())
+        ).all()
+        latest_by_name: dict[str, Metric] = {}
+        for metric in metrics:
+            if metric.name not in latest_by_name:
+                latest_by_name[metric.name] = metric
+        return [
+            {
+                'name': metric.name,
+                'value': metric.value,
+                'threshold_value': metric.threshold_value,
+                'direction': metric.direction.value,
+                'status': metric.status.value,
+                'observed_at': metric.observed_at.isoformat(),
+            }
+            for metric in latest_by_name.values()
+        ]
+
+    @staticmethod
+    def apply_outcome_transition(db: Session, experiment: Experiment, report: dict) -> Experiment:
+        if experiment.status != ExperimentStatus.running:
+            return experiment
+        if report['sample_progress'] < 1:
+            return experiment
+
+        recommendation = report['recommendation']
+        if recommendation == 'pass':
+            experiment.status = ExperimentStatus.passed
+        elif recommendation == 'fail':
+            experiment.status = ExperimentStatus.failed
+        else:
+            experiment.status = ExperimentStatus.inconclusive
+        experiment.ended_at = utc_now()
+        db.commit()
+        db.refresh(experiment)
+        return experiment
 
     @staticmethod
     def condensed_running_reports(db: Session):

@@ -64,6 +64,15 @@ export interface ExperimentReport {
   p_value: number;
   confidence: number;
   recommendation: string;
+  guardrails_breached: number;
+  guardrails: Array<{
+    name: string;
+    value: number;
+    threshold_value: number;
+    direction: 'max' | 'min';
+    status: 'healthy' | 'breached';
+    observed_at: string;
+  }>;
   estimated_days_to_decision: number | null;
   diff_in_diff_delta: number | null;
   variant_performance: Array<{
@@ -77,4 +86,22 @@ export interface ExperimentReport {
     pre_conversion_rate: number;
   }>;
   last_updated_at: string;
+}
+
+export interface ReportSnapshot {
+  id: string;
+  experiment_id: string;
+  snapshot: ExperimentReport;
+  created_at: string;
+}
+
+export interface GuardrailMetric {
+  id: string;
+  experiment_id: string;
+  name: string;
+  value: number;
+  threshold_value: number;
+  direction: 'max' | 'min';
+  status: 'healthy' | 'breached';
+  observed_at: string;
 }

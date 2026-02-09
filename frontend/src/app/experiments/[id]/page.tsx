@@ -3,18 +3,26 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { apiGet, apiPost, wsExperimentUrl } from '@/lib/api';
-import type { Experiment, ExperimentReport } from '@/types';
+import type { Experiment, ExperimentReport, GuardrailMetric, ReportSnapshot } from '@/types';
 
 export default function ExperimentDetailPage({ params }: { params: { id: string } }) {
   const experimentId = params.id;
   const [experiment, setExperiment] = useState<Experiment | null>(null);
   const [report, setReport] = useState<ExperimentReport | null>(null);
+  const [snapshots, setSnapshots] = useState<ReportSnapshot[]>([]);
+  const [guardrails, setGuardrails] = useState<GuardrailMetric[]>([]);
   const [reason, setReason] = useState('');
+  const [guardrailName, setGuardrailName] = useState('p95_latency_ms');
+  const [guardrailValue, setGuardrailValue] = useState(0);
+  const [guardrailThreshold, setGuardrailThreshold] = useState(350);
+  const [guardrailDirection, setGuardrailDirection] = useState<'max' | 'min'>('max');
   const wsUrl = useMemo(() => wsExperimentUrl(experimentId), [experimentId]);
 
   useEffect(() => {
     apiGet<Experiment>(`/experiments/${experimentId}`).then(setExperiment).catch(() => setExperiment(null));
     apiGet<ExperimentReport>(`/experiments/${experimentId}/report`).then(setReport).catch(() => setReport(null));
+    apiGet<ReportSnapshot[]>(`/experiments/${experimentId}/snapshots`).then(setSnapshots).catch(() => setSnapshots([]));
+    apiGet<GuardrailMetric[]>(`/metrics/guardrails/${experimentId}`).then(setGuardrails).catch(() => setGuardrails([]));
   }, [experimentId]);
 
   useEffect(() => {
@@ -23,6 +31,7 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
       try {
         const data = JSON.parse(event.data) as ExperimentReport;
         setReport(data);
+        apiGet<ReportSnapshot[]>(`/experiments/${experimentId}/snapshots`).then(setSnapshots).catch(() => setSnapshots([]));
       } catch {
         // Ignore malformed messages.
       }
@@ -34,6 +43,21 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
     await apiPost<Experiment>(`/experiments/${experimentId}/terminate`, { reason: reason || null });
     const updated = await apiGet<Experiment>(`/experiments/${experimentId}`);
     setExperiment(updated);
+  }
+
+  async function submitGuardrailMetric() {
+    const created = await apiPost<GuardrailMetric>('/metrics/guardrails', {
+      experiment_id: experimentId,
+      name: guardrailName,
+      value: guardrailValue,
+      threshold_value: guardrailThreshold,
+      direction: guardrailDirection,
+    });
+    setGuardrails((prev) => [created, ...prev]);
+    const updatedReport = await apiGet<ExperimentReport>(`/experiments/${experimentId}/report`);
+    setReport(updatedReport);
+    const refreshedSnapshots = await apiGet<ReportSnapshot[]>(`/experiments/${experimentId}/snapshots`);
+    setSnapshots(refreshedSnapshots);
   }
 
   if (!experiment) {
@@ -66,11 +90,59 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
           <p>p-value: {report.p_value.toFixed(4)}</p>
           <p>Confidence: {(report.confidence * 100).toFixed(1)}%</p>
           <p>Recommendation: <span className="badge">{report.recommendation}</span></p>
+          <p>Guardrails Breached: {report.guardrails_breached}</p>
           <p>Sample Progress: {(report.sample_progress * 100).toFixed(1)}%</p>
           <p>Diff-in-Diff Delta: {report.diff_in_diff_delta === null ? 'N/A (advanced mode)' : report.diff_in_diff_delta}</p>
           <p className="muted">Last Updated: {new Date(report.last_updated_at).toLocaleString()}</p>
         </div>
       )}
+
+      {report && (
+        <div className="card">
+          <h3>Guardrail Status</h3>
+          {report.guardrails.length === 0 && <p className="muted">No guardrail observations yet.</p>}
+          {report.guardrails.map((guardrail) => (
+            <p key={guardrail.name}>
+              {guardrail.name}: {guardrail.value} ({guardrail.direction} {guardrail.threshold_value}){' '}
+              <span className="badge">{guardrail.status}</span>
+            </p>
+          ))}
+        </div>
+      )}
+
+      <div className="card">
+        <h3>Log Guardrail Metric</h3>
+        <label htmlFor="guardrail-name">Metric Name</label>
+        <input id="guardrail-name" value={guardrailName} onChange={(e) => setGuardrailName(e.target.value)} />
+        <label htmlFor="guardrail-value">Observed Value</label>
+        <input
+          id="guardrail-value"
+          type="number"
+          value={guardrailValue}
+          onChange={(e) => setGuardrailValue(Number(e.target.value))}
+        />
+        <label htmlFor="guardrail-threshold">Threshold Value</label>
+        <input
+          id="guardrail-threshold"
+          type="number"
+          value={guardrailThreshold}
+          onChange={(e) => setGuardrailThreshold(Number(e.target.value))}
+        />
+        <label htmlFor="guardrail-direction">Direction</label>
+        <select
+          id="guardrail-direction"
+          value={guardrailDirection}
+          onChange={(e) => setGuardrailDirection(e.target.value as 'max' | 'min')}
+        >
+          <option value="max">max (value should stay under threshold)</option>
+          <option value="min">min (value should stay above threshold)</option>
+        </select>
+        <div style={{ marginTop: '0.7rem' }}>
+          <button className="primary" onClick={submitGuardrailMetric}>
+            Add Guardrail Observation
+          </button>
+        </div>
+      </div>
 
       {report && (
         <div className="card">
@@ -115,6 +187,17 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
           </div>
         </div>
       )}
+
+      <div className="card">
+        <h3>Report Snapshots</h3>
+        {snapshots.length === 0 && <p className="muted">No snapshots captured yet.</p>}
+        {snapshots.slice(0, 10).map((snapshot) => (
+          <p key={snapshot.id}>
+            {new Date(snapshot.created_at).toLocaleString()} | recommendation: {snapshot.snapshot.recommendation} |
+            confidence: {(snapshot.snapshot.confidence * 100).toFixed(1)}%
+          </p>
+        ))}
+      </div>
     </section>
   );
 }

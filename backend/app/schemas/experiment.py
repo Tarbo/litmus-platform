@@ -85,6 +85,8 @@ class ExperimentReport(BaseModel):
     p_value: float
     confidence: float
     recommendation: str
+    guardrails_breached: int
+    guardrails: list[dict]
     estimated_days_to_decision: int | None
     diff_in_diff_delta: float | None
     variant_performance: list[dict]
