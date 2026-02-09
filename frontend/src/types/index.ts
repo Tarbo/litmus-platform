@@ -75,6 +75,17 @@ export interface ExperimentReport {
   }>;
   estimated_days_to_decision: number | null;
   diff_in_diff_delta: number | null;
+  assignment_policy: string;
+  bandit_state: Array<{
+    variant_id: string;
+    variant_name: string;
+    exposures: number;
+    conversions: number;
+    alpha: number;
+    beta: number;
+    expected_rate: number;
+    win_probability: number;
+  }>;
   variant_performance: Array<{
     variant_id: string;
     variant_name: string;
