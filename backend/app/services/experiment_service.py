@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import random
 
 from fastapi import HTTPException
 from sqlalchemy import case, func, select
@@ -11,6 +12,7 @@ from app.core.statistics import (
     two_proportion_z_test,
     uplift_confidence_interval,
 )
+from app.core.bandits import build_thompson_posteriors, estimate_win_probabilities
 from app.models.assignment import Assignment
 from app.models.decision_audit import DecisionSource
 from app.models.event import Event
@@ -26,6 +28,27 @@ def utc_now() -> datetime:
 
 
 class ExperimentService:
+    @staticmethod
+    def _variant_event_counts(db: Session, experiment_id: str) -> dict[str, tuple[int, int]]:
+        rows = db.execute(
+            select(
+                Event.variant_id,
+                func.count(case((Event.event_type == 'exposure', 1))).label('exposures'),
+                func.count(case((Event.event_type == 'conversion', 1))).label('conversions'),
+            ).where(
+                Event.experiment_id == experiment_id,
+                Event.period == 'post',
+                Event.variant_id.is_not(None),
+            )
+            .group_by(Event.variant_id)
+        ).all()
+        counts: dict[str, tuple[int, int]] = {}
+        for variant_id, exposures, conversions in rows:
+            if not variant_id:
+                continue
+            counts[variant_id] = (exposures or 0, conversions or 0)
+        return counts
+
     @staticmethod
     def create_experiment(db: Session, payload: ExperimentCreate) -> Experiment:
         sample_size = calculate_sample_size(payload.baseline_rate, payload.mde, payload.alpha, payload.power)
@@ -138,6 +161,26 @@ class ExperimentService:
         sample_progress = min(1.0, exposures / experiment.sample_size_required) if experiment.sample_size_required else 0.0
 
         variants = experiment.variants
+        variant_rows = [(variant.id, variant.name) for variant in variants]
+        counts_by_variant = ExperimentService._variant_event_counts(db, experiment.id)
+        posteriors = build_thompson_posteriors(variant_rows, counts_by_variant)
+        win_probabilities = estimate_win_probabilities(
+            posteriors=posteriors,
+            rng=random.Random(experiment.id),
+        )
+        bandit_state = [
+            {
+                'variant_id': posterior.variant_id,
+                'variant_name': posterior.variant_name,
+                'exposures': posterior.exposures,
+                'conversions': posterior.conversions,
+                'alpha': round(posterior.alpha, 3),
+                'beta': round(posterior.beta, 3),
+                'expected_rate': round(posterior.expected_rate, 4),
+                'win_probability': round(win_probabilities.get(posterior.variant_id, 0.0), 4),
+            }
+            for posterior in posteriors
+        ]
         control_rate = 0.0
         treatment_rate = 0.0
         did_delta = None
@@ -251,6 +294,8 @@ class ExperimentService:
             'estimated_days_to_decision': None if exposures == 0 else max(0, int((experiment.sample_size_required - exposures) / 200)),
             'diff_in_diff_delta': did_delta,
             'variant_performance': variant_performance,
+            'assignment_policy': 'thompson_sampling',
+            'bandit_state': bandit_state,
             'last_updated_at': utc_now(),
         }
 

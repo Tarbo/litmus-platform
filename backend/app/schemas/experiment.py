@@ -90,4 +90,6 @@ class ExperimentReport(BaseModel):
     estimated_days_to_decision: int | None
     diff_in_diff_delta: float | None
     variant_performance: list[dict]
+    assignment_policy: str
+    bandit_state: list[dict]
     last_updated_at: datetime
