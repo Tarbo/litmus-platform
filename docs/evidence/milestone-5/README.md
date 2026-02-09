@@ -10,8 +10,8 @@ cd /Users/ezeme.okwudili/Desktop/litmus-platform/backend
 
 2. Python SDK tests
 ```bash
-cd /Users/ezeme.okwudili/Desktop/litmus-platform
-PYTHONPATH=sdk/python backend/venv3.12/bin/pytest -q sdk/python/tests
+cd /Users/ezeme.okwudili/Desktop/litmus-platform/sdk
+../backend/venv3.12/bin/pytest -q python/tests
 ```
 
 3. Frontend build
