@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { apiGet, apiPost, wsExperimentUrl } from '@/lib/api';
-import type { Experiment, ExperimentReport, GuardrailMetric, ReportSnapshot } from '@/types';
+import type { DecisionAudit, Experiment, ExperimentReport, GuardrailMetric, ReportSnapshot } from '@/types';
 
 export default function ExperimentDetailPage({ params }: { params: { id: string } }) {
   const experimentId = params.id;
@@ -11,7 +11,10 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
   const [report, setReport] = useState<ExperimentReport | null>(null);
   const [snapshots, setSnapshots] = useState<ReportSnapshot[]>([]);
   const [guardrails, setGuardrails] = useState<GuardrailMetric[]>([]);
+  const [decisions, setDecisions] = useState<DecisionAudit[]>([]);
   const [reason, setReason] = useState('');
+  const [decisionStatus, setDecisionStatus] = useState<'passed' | 'failed' | 'inconclusive'>('inconclusive');
+  const [decisionReason, setDecisionReason] = useState('');
   const [guardrailName, setGuardrailName] = useState('p95_latency_ms');
   const [guardrailValue, setGuardrailValue] = useState(0);
   const [guardrailThreshold, setGuardrailThreshold] = useState(350);
@@ -23,6 +26,7 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
     apiGet<ExperimentReport>(`/experiments/${experimentId}/report`).then(setReport).catch(() => setReport(null));
     apiGet<ReportSnapshot[]>(`/experiments/${experimentId}/snapshots`).then(setSnapshots).catch(() => setSnapshots([]));
     apiGet<GuardrailMetric[]>(`/metrics/guardrails/${experimentId}`).then(setGuardrails).catch(() => setGuardrails([]));
+    apiGet<DecisionAudit[]>(`/experiments/${experimentId}/decision-history`).then(setDecisions).catch(() => setDecisions([]));
   }, [experimentId]);
 
   useEffect(() => {
@@ -32,6 +36,7 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
         const data = JSON.parse(event.data) as ExperimentReport;
         setReport(data);
         apiGet<ReportSnapshot[]>(`/experiments/${experimentId}/snapshots`).then(setSnapshots).catch(() => setSnapshots([]));
+        apiGet<DecisionAudit[]>(`/experiments/${experimentId}/decision-history`).then(setDecisions).catch(() => setDecisions([]));
       } catch {
         // Ignore malformed messages.
       }
@@ -58,6 +63,17 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
     setReport(updatedReport);
     const refreshedSnapshots = await apiGet<ReportSnapshot[]>(`/experiments/${experimentId}/snapshots`);
     setSnapshots(refreshedSnapshots);
+  }
+
+  async function applyDecision() {
+    const updated = await apiPost<Experiment>(`/experiments/${experimentId}/decision`, {
+      status: decisionStatus,
+      reason: decisionReason || null,
+      actor: 'ui.operator',
+    });
+    setExperiment(updated);
+    const decisionItems = await apiGet<DecisionAudit[]>(`/experiments/${experimentId}/decision-history`);
+    setDecisions(decisionItems);
   }
 
   if (!experiment) {
@@ -187,6 +203,39 @@ export default function ExperimentDetailPage({ params }: { params: { id: string 
           </div>
         </div>
       )}
+
+      <div className="card">
+        <h3>Decision Override</h3>
+        <p className="muted">Manual override writes an audit record and updates experiment status.</p>
+        <label htmlFor="decision-status">Decision</label>
+        <select
+          id="decision-status"
+          value={decisionStatus}
+          onChange={(e) => setDecisionStatus(e.target.value as 'passed' | 'failed' | 'inconclusive')}
+        >
+          <option value="passed">passed</option>
+          <option value="failed">failed</option>
+          <option value="inconclusive">inconclusive</option>
+        </select>
+        <label htmlFor="decision-reason">Reason</label>
+        <textarea id="decision-reason" value={decisionReason} onChange={(e) => setDecisionReason(e.target.value)} rows={3} />
+        <div style={{ marginTop: '0.7rem' }}>
+          <button className="primary" onClick={applyDecision}>
+            Apply Decision Override
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>Decision History</h3>
+        {decisions.length === 0 && <p className="muted">No decision records yet.</p>}
+        {decisions.slice(0, 10).map((entry) => (
+          <p key={entry.id}>
+            {new Date(entry.created_at).toLocaleString()} | {entry.source} | {entry.previous_status} -&gt; {entry.new_status} |
+            {` ${entry.actor}`} {entry.reason ? `| ${entry.reason}` : ''}
+          </p>
+        ))}
+      </div>
 
       <div className="card">
         <h3>Report Snapshots</h3>
