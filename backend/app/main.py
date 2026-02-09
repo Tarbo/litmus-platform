@@ -10,6 +10,8 @@ from app.models import Base  # noqa: F401
 from app.models.assignment import Assignment  # noqa: F401
 from app.models.event import Event  # noqa: F401
 from app.models.experiment import Experiment  # noqa: F401
+from app.models.metric import Metric  # noqa: F401
+from app.models.report_snapshot import ReportSnapshot  # noqa: F401
 from app.models.variant import Variant  # noqa: F401
 
 

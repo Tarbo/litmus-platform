@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -10,7 +12,9 @@ from app.schemas.experiment import (
     ExperimentResponse,
     ExperimentStatusUpdate,
 )
+from app.schemas.snapshot import ReportSnapshotResponse
 from app.services.experiment_service import ExperimentService
+from app.services.snapshot_service import SnapshotService
 
 router = APIRouter(prefix='/experiments', tags=['experiments'])
 
@@ -48,4 +52,22 @@ def terminate_experiment(experiment_id: str, payload: ExperimentStatusUpdate, db
 @router.get('/{experiment_id}/report', response_model=ExperimentReport)
 def experiment_report(experiment_id: str, db: Session = Depends(get_db)):
     experiment = ExperimentService.get_experiment(db, experiment_id)
-    return ExperimentService.build_report(db, experiment)
+    report = ExperimentService.build_report(db, experiment)
+    experiment = ExperimentService.apply_outcome_transition(db, experiment, report)
+    report['status'] = experiment.status
+    SnapshotService.create_snapshot(db, experiment_id, report)
+    return report
+
+
+@router.get('/{experiment_id}/snapshots', response_model=list[ReportSnapshotResponse])
+def experiment_snapshots(experiment_id: str, db: Session = Depends(get_db)):
+    snapshots = SnapshotService.list_snapshots(db, experiment_id)
+    return [
+        ReportSnapshotResponse(
+            id=snapshot.id,
+            experiment_id=snapshot.experiment_id,
+            snapshot=json.loads(snapshot.snapshot_json),
+            created_at=snapshot.created_at,
+        )
+        for snapshot in snapshots
+    ]
