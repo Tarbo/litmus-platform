@@ -5,6 +5,7 @@
 - Ensure `ADMIN_API_TOKENS` is configured with at least 2 rotated tokens.
 - Verify `RATE_LIMIT_PER_MINUTE` for production traffic profile.
 - Confirm database backup freshness.
+- Review API contract: `docs/api/contract.md`.
 
 ## 2. Required environment variables
 - `ENVIRONMENT=production`
@@ -25,11 +26,22 @@
 2. Restart backend workers and API.
 3. Validate `/health`, `/ready`, and key read endpoints.
 4. Run smoke checks:
-   - fetch experiment list
-   - fetch one report
+   - `python3 scripts/smoke_self_serve.py --base-url <service-base-url> --token <admin-token>`
    - check `/metrics` increments for expected routes
-   - validate frontend build/deploy status
+   - validate frontend deployment health
 
 ## 5. Post-incident
 - Record root cause and remediation in incident log.
 - Add regression test if bug escaped test suite.
+
+## 6. Local end-to-end validation before release
+1. Start stack:
+   - `docker compose up --build`
+2. Confirm dependencies:
+   - `curl -s http://localhost:8000/health`
+   - `curl -s http://localhost:8000/ready`
+3. Run smoke flow:
+   - `python3 scripts/smoke_self_serve.py --base-url http://localhost:8000`
+4. Verify frontend:
+   - open `http://localhost:3000`
+   - create or inspect experiments via UI screens

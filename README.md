@@ -74,6 +74,28 @@ Endpoints:
 Frontend runtime config:
 - `NUXT_PUBLIC_API_BASE` (default: `http://localhost:8000/api/v1`)
 
+## Smoke Test (Self-Serve Flow)
+
+After services are up, validate full lifecycle with:
+
+```bash
+python3 scripts/smoke_self_serve.py --base-url http://localhost:8000
+```
+
+If write tokens are enabled, pass one:
+
+```bash
+python3 scripts/smoke_self_serve.py --base-url http://localhost:8000 --token <admin-token>
+```
+
+The smoke flow covers:
+- health/readiness checks
+- experiment creation + launch
+- deterministic assignment request
+- exposure + metric ingestion
+- results retrieval
+- pause + stop lifecycle actions
+
 ## Python SDK Quickstart
 
 ```python
