@@ -83,7 +83,7 @@ def test_experiment_lifecycle_terminate_releases_assignments(tmp_path):
         assert 'variant_performance' in report
 
         terminated = ExperimentService.terminate_experiment(db, experiment.id, 'manual stop from operations')
-        assert terminated.status.value == 'terminated_without_cause'
+        assert terminated.status.value == 'STOPPED'
 
         try:
             AssignmentService.assign_user(db, experiment.id, 'u-2')
