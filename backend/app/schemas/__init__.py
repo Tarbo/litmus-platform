@@ -5,9 +5,10 @@ from app.schemas.experiment import (
     CondensedPerformance,
     ExecutiveSummary,
     ExperimentCreate,
+    ExperimentLifecycleAction,
+    ExperimentPatch,
     ExperimentReport,
     ExperimentResponse,
-    ExperimentStatusUpdate,
 )
 from app.schemas.metric import GuardrailMetricCreate, GuardrailMetricResponse
 from app.schemas.snapshot import ReportSnapshotResponse
@@ -23,9 +24,10 @@ __all__ = [
     'CondensedPerformance',
     'ExecutiveSummary',
     'ExperimentCreate',
+    'ExperimentPatch',
+    'ExperimentLifecycleAction',
     'ExperimentReport',
     'ExperimentResponse',
-    'ExperimentStatusUpdate',
     'GuardrailMetricCreate',
     'GuardrailMetricResponse',
     'ReportSnapshotResponse',

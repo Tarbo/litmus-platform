@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 import random
 
 from fastapi import HTTPException
@@ -29,6 +30,52 @@ def utc_now() -> datetime:
 
 class ExperimentService:
     @staticmethod
+    def serialize_experiment(experiment: Experiment) -> dict:
+        variants = []
+        for variant in experiment.variants:
+            try:
+                config_payload = json.loads(variant.config_json)
+                if not isinstance(config_payload, dict):
+                    config_payload = {}
+            except json.JSONDecodeError:
+                config_payload = {}
+            variants.append(
+                {
+                    'id': variant.id,
+                    'key': variant.key,
+                    'name': variant.name,
+                    'weight': variant.weight,
+                    'traffic_allocation': variant.weight,
+                    'config_json': config_payload,
+                }
+            )
+        return {
+            'id': experiment.id,
+            'name': experiment.name,
+            'description': experiment.description,
+            'hypothesis': experiment.hypothesis,
+            'owner_team': experiment.owner_team,
+            'created_by': experiment.created_by,
+            'tags': experiment.tags,
+            'unit_type': experiment.unit_type,
+            'targeting': experiment.targeting,
+            'ramp_pct': experiment.ramp_pct,
+            'version': experiment.version,
+            'mde': experiment.mde,
+            'baseline_rate': experiment.baseline_rate,
+            'alpha': experiment.alpha,
+            'power': experiment.power,
+            'sample_size_required': experiment.sample_size_required,
+            'status': experiment.status,
+            'started_at': experiment.started_at,
+            'ended_at': experiment.ended_at,
+            'termination_reason': experiment.termination_reason,
+            'created_at': experiment.created_at,
+            'updated_at': experiment.updated_at,
+            'variants': variants,
+        }
+
+    @staticmethod
     def _variant_event_counts(db: Session, experiment_id: str) -> dict[str, tuple[int, int]]:
         rows = db.execute(
             select(
@@ -54,14 +101,21 @@ class ExperimentService:
         sample_size = calculate_sample_size(payload.baseline_rate, payload.mde, payload.alpha, payload.power)
         experiment = Experiment(
             name=payload.name,
+            description=payload.description or payload.hypothesis or '',
             hypothesis=payload.hypothesis,
+            owner_team=payload.owner_team,
+            created_by=payload.created_by,
+            unit_type=payload.unit_type,
+            tags_json=json.dumps(payload.tags),
+            targeting_json=json.dumps(payload.targeting),
+            ramp_pct=payload.ramp_pct,
+            version=1,
             mde=payload.mde,
             baseline_rate=payload.baseline_rate,
             alpha=payload.alpha,
             power=payload.power,
             sample_size_required=sample_size,
-            status=ExperimentStatus.running,
-            started_at=utc_now(),
+            status=ExperimentStatus.DRAFT,
         )
         db.add(experiment)
         db.flush()
@@ -69,8 +123,10 @@ class ExperimentService:
         variants = [
             Variant(
                 experiment_id=experiment.id,
+                key=variant.key or variant.name.lower().replace(' ', '_'),
                 name=variant.name,
-                traffic_allocation=variant.traffic_allocation,
+                weight=variant.weight or 0.0,
+                config_json=variant.to_config_json(),
             )
             for variant in payload.variants
         ]
@@ -116,15 +172,94 @@ class ExperimentService:
     def executive_summary(db: Session) -> dict[str, int]:
         rows = db.execute(select(Experiment.status, func.count(Experiment.id)).group_by(Experiment.status)).all()
         summary = {
-            'passed': 0,
-            'failed': 0,
+            'draft': 0,
             'running': 0,
-            'inconclusive': 0,
-            'terminated_without_cause': 0,
+            'paused': 0,
+            'stopped': 0,
         }
         for status, count in rows:
-            summary[status.value] = count
+            summary[status.value.lower()] = count
         return summary
+
+    @staticmethod
+    def patch_experiment(db: Session, experiment_id: str, payload) -> Experiment:
+        experiment = ExperimentService.get_experiment(db, experiment_id)
+        if payload.name is not None:
+            experiment.name = payload.name
+        if payload.description is not None:
+            experiment.description = payload.description
+            experiment.hypothesis = payload.description
+        if payload.owner_team is not None:
+            experiment.owner_team = payload.owner_team
+        if payload.tags is not None:
+            experiment.tags_json = json.dumps(payload.tags)
+        if payload.targeting is not None:
+            experiment.targeting_json = json.dumps(payload.targeting)
+        if payload.ramp_pct is not None:
+            experiment.ramp_pct = payload.ramp_pct
+        if payload.variants is not None:
+            db.query(Variant).filter(Variant.experiment_id == experiment.id).delete(synchronize_session=False)
+            db.add_all(
+                [
+                    Variant(
+                        experiment_id=experiment.id,
+                        key=variant.key or variant.name.lower().replace(' ', '_'),
+                        name=variant.name,
+                        weight=variant.weight or 0.0,
+                        config_json=variant.to_config_json(),
+                    )
+                    for variant in payload.variants
+                ]
+            )
+        experiment.version += 1
+        db.commit()
+        db.refresh(experiment)
+        return experiment
+
+    @staticmethod
+    def launch_experiment(db: Session, experiment_id: str, ramp_pct: int | None) -> Experiment:
+        experiment = ExperimentService.get_experiment(db, experiment_id)
+        if ramp_pct is not None:
+            experiment.ramp_pct = ramp_pct
+        if experiment.status != ExperimentStatus.RUNNING:
+            experiment.status = ExperimentStatus.RUNNING
+            experiment.started_at = utc_now()
+            experiment.ended_at = None
+            experiment.termination_reason = None
+        experiment.version += 1
+        db.commit()
+        db.refresh(experiment)
+        return experiment
+
+    @staticmethod
+    def pause_experiment(db: Session, experiment_id: str) -> Experiment:
+        experiment = ExperimentService.get_experiment(db, experiment_id)
+        if experiment.status == ExperimentStatus.STOPPED:
+            raise HTTPException(status_code=409, detail='Stopped experiment cannot be paused')
+        experiment.status = ExperimentStatus.PAUSED
+        experiment.version += 1
+        db.commit()
+        db.refresh(experiment)
+        return experiment
+
+    @staticmethod
+    def stop_experiment(db: Session, experiment_id: str, reason: str | None) -> Experiment:
+        experiment = ExperimentService.get_experiment(db, experiment_id)
+        if experiment.status == ExperimentStatus.STOPPED:
+            return experiment
+        experiment.status = ExperimentStatus.STOPPED
+        experiment.ended_at = utc_now()
+        experiment.termination_reason = reason or 'Stopped manually'
+        experiment.ramp_pct = 0
+        experiment.version += 1
+        release_time = utc_now()
+        db.query(Assignment).filter(
+            Assignment.experiment_id == experiment_id,
+            Assignment.released_at.is_(None),
+        ).update({'released_at': release_time}, synchronize_session=False)
+        db.commit()
+        db.refresh(experiment)
+        return experiment
 
     @staticmethod
     def _report_query(db: Session, experiment_id: str):

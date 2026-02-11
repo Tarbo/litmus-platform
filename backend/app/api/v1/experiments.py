@@ -8,9 +8,10 @@ from app.schemas.experiment import (
     CondensedPerformance,
     ExecutiveSummary,
     ExperimentCreate,
+    ExperimentLifecycleAction,
+    ExperimentPatch,
     ExperimentReport,
     ExperimentResponse,
-    ExperimentStatusUpdate,
 )
 from app.schemas.decision import DecisionAuditResponse, DecisionOverrideRequest
 from app.schemas.snapshot import ReportSnapshotResponse
@@ -27,12 +28,14 @@ def create_experiment(
     db: Session = Depends(get_db),
     _auth: None = Depends(require_write_access),
 ):
-    return ExperimentService.create_experiment(db, payload)
+    experiment = ExperimentService.create_experiment(db, payload)
+    return ExperimentService.serialize_experiment(experiment)
 
 
 @router.get('', response_model=list[ExperimentResponse])
 def list_experiments(db: Session = Depends(get_db)):
-    return ExperimentService.list_experiments(db)
+    experiments = ExperimentService.list_experiments(db)
+    return [ExperimentService.serialize_experiment(item) for item in experiments]
 
 
 @router.get('/running', response_model=list[CondensedPerformance])
@@ -47,17 +50,63 @@ def executive_summary(db: Session = Depends(get_db)):
 
 @router.get('/{experiment_id}', response_model=ExperimentResponse)
 def get_experiment(experiment_id: str, db: Session = Depends(get_db)):
-    return ExperimentService.get_experiment(db, experiment_id)
+    experiment = ExperimentService.get_experiment(db, experiment_id)
+    return ExperimentService.serialize_experiment(experiment)
+
+
+@router.patch('/{experiment_id}', response_model=ExperimentResponse)
+def patch_experiment(
+    experiment_id: str,
+    payload: ExperimentPatch,
+    db: Session = Depends(get_db),
+    _auth: None = Depends(require_write_access),
+):
+    experiment = ExperimentService.patch_experiment(db, experiment_id, payload)
+    return ExperimentService.serialize_experiment(experiment)
+
+
+@router.post('/{experiment_id}/launch', response_model=ExperimentResponse)
+def launch_experiment(
+    experiment_id: str,
+    payload: ExperimentLifecycleAction,
+    db: Session = Depends(get_db),
+    _auth: None = Depends(require_write_access),
+):
+    experiment = ExperimentService.launch_experiment(db, experiment_id, payload.ramp_pct)
+    return ExperimentService.serialize_experiment(experiment)
+
+
+@router.post('/{experiment_id}/pause', response_model=ExperimentResponse)
+def pause_experiment(
+    experiment_id: str,
+    payload: ExperimentLifecycleAction,
+    db: Session = Depends(get_db),
+    _auth: None = Depends(require_write_access),
+):
+    experiment = ExperimentService.pause_experiment(db, experiment_id)
+    return ExperimentService.serialize_experiment(experiment)
+
+
+@router.post('/{experiment_id}/stop', response_model=ExperimentResponse)
+def stop_experiment(
+    experiment_id: str,
+    payload: ExperimentLifecycleAction,
+    db: Session = Depends(get_db),
+    _auth: None = Depends(require_write_access),
+):
+    experiment = ExperimentService.stop_experiment(db, experiment_id, payload.reason)
+    return ExperimentService.serialize_experiment(experiment)
 
 
 @router.post('/{experiment_id}/terminate', response_model=ExperimentResponse)
 def terminate_experiment(
     experiment_id: str,
-    payload: ExperimentStatusUpdate,
+    payload: ExperimentLifecycleAction,
     db: Session = Depends(get_db),
     _auth: None = Depends(require_write_access),
 ):
-    return ExperimentService.terminate_experiment(db, experiment_id, payload.reason)
+    experiment = ExperimentService.stop_experiment(db, experiment_id, payload.reason)
+    return ExperimentService.serialize_experiment(experiment)
 
 
 @router.post('/{experiment_id}/decision', response_model=ExperimentResponse)

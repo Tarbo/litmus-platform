@@ -25,12 +25,16 @@ def test_executive_summary_includes_running_and_terminated(tmp_path):
         )
         experiment = ExperimentService.create_experiment(db, payload)
 
+        summary_draft = ExperimentService.executive_summary(db)
+        assert summary_draft['draft'] == 1
+
+        ExperimentService.launch_experiment(db, experiment.id, ramp_pct=10)
         summary_running = ExperimentService.executive_summary(db)
         assert summary_running['running'] == 1
 
-        ExperimentService.terminate_experiment(db, experiment.id, 'summary termination')
-        summary_terminated = ExperimentService.executive_summary(db)
-        assert summary_terminated['terminated_without_cause'] == 1
+        ExperimentService.stop_experiment(db, experiment.id, 'summary termination')
+        summary_stopped = ExperimentService.executive_summary(db)
+        assert summary_stopped['stopped'] == 1
     finally:
         db.close()
         engine.dispose()
