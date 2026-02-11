@@ -11,6 +11,7 @@ from app.schemas.experiment import (
     ExperimentResponse,
 )
 from app.schemas.metric import GuardrailMetricCreate, GuardrailMetricResponse
+from app.schemas.results import ExperimentResultsResponse
 from app.schemas.snapshot import ReportSnapshotResponse
 from app.schemas.variant import VariantCreate, VariantResponse
 
@@ -30,6 +31,7 @@ __all__ = [
     'ExperimentResponse',
     'GuardrailMetricCreate',
     'GuardrailMetricResponse',
+    'ExperimentResultsResponse',
     'ReportSnapshotResponse',
     'VariantCreate',
     'VariantResponse',

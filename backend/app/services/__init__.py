@@ -5,6 +5,7 @@ from app.services.event_service import EventService
 from app.services.experiment_service import ExperimentService
 from app.services.metric_service import MetricService
 from app.services.realtime_service import RealtimeService
+from app.services.results_service import ResultsService
 from app.services.snapshot_service import SnapshotService
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     'ExperimentService',
     'MetricService',
     'RealtimeService',
+    'ResultsService',
     'SnapshotService',
 ]
