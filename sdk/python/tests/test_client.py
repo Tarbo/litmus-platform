@@ -1,3 +1,4 @@
+import json
 from urllib import error
 from unittest.mock import patch
 
@@ -113,3 +114,46 @@ def test_get_variant_retries_on_server_error_then_succeeds():
 
     assert assignment.assignment_id == 'asg-2'
     assert mocked.call_count == 2
+
+
+def test_log_exposure_flushes_on_batch_threshold():
+    client = ExperimentClient(base_url='http://test', batch_size=2)
+    requests_seen = []
+
+    def _capture(req, timeout=None):
+        requests_seen.append((req.full_url, req.data.decode('utf-8')))
+        return _FakeResponse('{"ingested": 2}')
+
+    with patch('litmus.client.request.urlopen', side_effect=_capture):
+        client.log_exposure('exp-1', 'unit-1', 'control')
+        assert len(requests_seen) == 0
+        client.log_exposure('exp-1', 'unit-2', 'treatment')
+        assert len(requests_seen) == 1
+
+    endpoint, body = requests_seen[0]
+    items = json.loads(body)
+    assert endpoint.endswith('/api/v1/events/exposure')
+    variant_keys = {item['variant_key'] for item in items}
+    assert variant_keys == {'control', 'treatment'}
+
+
+def test_flush_posts_metric_batch_payload():
+    client = ExperimentClient(base_url='http://test', batch_size=10)
+    requests_seen = []
+
+    def _capture(req, timeout=None):
+        requests_seen.append((req.full_url, req.data.decode('utf-8')))
+        return _FakeResponse('{"ingested": 2}')
+
+    with patch('litmus.client.request.urlopen', side_effect=_capture):
+        client.log_metric('exp-2', 'unit-7', 'control', 'gmv', 10.0)
+        client.log_metric('exp-2', 'unit-8', 'treatment', 'gmv', 12.5)
+        flushed = client.flush()
+
+    assert flushed['metric'] == 2
+    assert flushed['exposure'] == 0
+    assert len(requests_seen) == 1
+    endpoint, body = requests_seen[0]
+    items = json.loads(body)
+    assert endpoint.endswith('/api/v1/events/metric')
+    assert {item['metric_name'] for item in items} == {'gmv'}
