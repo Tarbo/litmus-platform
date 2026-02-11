@@ -150,23 +150,7 @@ class ExperimentService:
 
     @staticmethod
     def terminate_experiment(db: Session, experiment_id: str, reason: str | None) -> Experiment:
-        experiment = ExperimentService.get_experiment(db, experiment_id)
-        if experiment.status != ExperimentStatus.running:
-            raise HTTPException(status_code=400, detail='Only running experiments can be terminated')
-
-        experiment.status = ExperimentStatus.terminated_without_cause
-        experiment.termination_reason = reason or 'Terminated manually from UI'
-        experiment.ended_at = utc_now()
-
-        release_time = utc_now()
-        db.query(Assignment).filter(
-            Assignment.experiment_id == experiment_id,
-            Assignment.released_at.is_(None),
-        ).update({'released_at': release_time}, synchronize_session=False)
-
-        db.commit()
-        db.refresh(experiment)
-        return experiment
+        return ExperimentService.stop_experiment(db, experiment_id, reason)
 
     @staticmethod
     def executive_summary(db: Session) -> dict[str, int]:
@@ -219,8 +203,12 @@ class ExperimentService:
     @staticmethod
     def launch_experiment(db: Session, experiment_id: str, ramp_pct: int | None) -> Experiment:
         experiment = ExperimentService.get_experiment(db, experiment_id)
+        if experiment.status == ExperimentStatus.STOPPED:
+            raise HTTPException(status_code=409, detail='Stopped experiment cannot be relaunched')
         if ramp_pct is not None:
             experiment.ramp_pct = ramp_pct
+        if experiment.ramp_pct <= 0:
+            raise HTTPException(status_code=422, detail='Launch requires ramp_pct greater than 0')
         if experiment.status != ExperimentStatus.RUNNING:
             experiment.status = ExperimentStatus.RUNNING
             experiment.started_at = utc_now()
@@ -236,6 +224,8 @@ class ExperimentService:
         experiment = ExperimentService.get_experiment(db, experiment_id)
         if experiment.status == ExperimentStatus.STOPPED:
             raise HTTPException(status_code=409, detail='Stopped experiment cannot be paused')
+        if experiment.status != ExperimentStatus.RUNNING:
+            raise HTTPException(status_code=409, detail='Only running experiment can be paused')
         experiment.status = ExperimentStatus.PAUSED
         experiment.version += 1
         db.commit()
