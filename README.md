@@ -21,7 +21,7 @@ Litmus is a full-stack experimentation platform for running A/B tests, A/B/n tes
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | Next.js 14 (App Router), shadcn/ui, Tailwind CSS, Tremor |
+| Frontend | Nuxt 3 (Vue 3 + Nitro) |
 | Backend | FastAPI, WebSockets |
 | Database | PostgreSQL + TimescaleDB |
 | Cache & Pub/Sub | Redis |
@@ -33,13 +33,12 @@ Litmus is a full-stack experimentation platform for running A/B tests, A/B/n tes
 
 ```
 litmus-platform/
-├── frontend/           # Next.js 14 application
-│   └── src/
-│       ├── app/        # App Router pages
-│       ├── components/ # React components
-│       ├── hooks/      # Custom hooks
-│       ├── lib/        # Utilities
-│       └── types/      # TypeScript types
+├── frontend/           # Nuxt 3 application
+│   ├── pages/          # File-based routes
+│   ├── composables/    # API/data hooks
+│   ├── assets/         # Styling and static assets
+│   ├── types/          # Shared TypeScript types
+│   └── nuxt.config.ts  # Runtime/frontend config
 │
 ├── backend/            # FastAPI application
 │   └── app/
@@ -71,6 +70,9 @@ Endpoints:
 - Health: `http://localhost:8000/health`
 - Readiness: `http://localhost:8000/ready`
 - Metrics: `http://localhost:8000/metrics`
+
+Frontend runtime config:
+- `NUXT_PUBLIC_API_BASE` (default: `http://localhost:8000/api/v1`)
 
 ## Python SDK Quickstart
 
