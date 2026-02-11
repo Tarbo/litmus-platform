@@ -14,15 +14,15 @@ class ExperimentStatus(str, enum.Enum):
     RUNNING = 'RUNNING'
     PAUSED = 'PAUSED'
     STOPPED = 'STOPPED'
+    passed = 'passed'
+    failed = 'failed'
+    inconclusive = 'inconclusive'
+    terminated_without_cause = 'terminated_without_cause'
     # Backward-compatible aliases used by existing modules during migration.
     draft = DRAFT
     running = RUNNING
     paused = PAUSED
     stopped = STOPPED
-    passed = STOPPED
-    failed = STOPPED
-    inconclusive = STOPPED
-    terminated_without_cause = STOPPED
 
 
 class Experiment(Base, TimestampMixin):

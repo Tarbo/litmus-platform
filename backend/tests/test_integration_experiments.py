@@ -29,6 +29,7 @@ def test_experiment_lifecycle_terminate_releases_assignments(tmp_path):
             ],
         )
         experiment = ExperimentService.create_experiment(db, create_payload)
+        experiment = ExperimentService.launch_experiment(db, experiment.id, ramp_pct=100)
 
         assignment = AssignmentService.assign_user(db, experiment.id, 'u-1')
 

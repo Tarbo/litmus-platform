@@ -25,6 +25,7 @@ def test_thompson_sampling_favors_variant_with_stronger_conversion_signal(tmp_pa
                 ],
             ),
         )
+        experiment = ExperimentService.launch_experiment(db, experiment.id, ramp_pct=100)
         experiment = ExperimentService.get_experiment(db, experiment.id)
         variant_ids = {variant.name: variant.id for variant in experiment.variants}
 

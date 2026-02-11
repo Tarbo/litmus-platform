@@ -30,6 +30,7 @@ def test_manual_decision_override_records_audit(tmp_path):
                 ],
             ),
         )
+        experiment = ExperimentService.launch_experiment(db, experiment.id, ramp_pct=100)
 
         updated = ExperimentService.override_status(
             db=db,
@@ -71,6 +72,7 @@ def test_auto_decision_records_audit(tmp_path):
                 ],
             ),
         )
+        experiment = ExperimentService.launch_experiment(db, experiment.id, ramp_pct=100)
 
         control_id = experiment.variants[0].id
         treatment_id = experiment.variants[1].id

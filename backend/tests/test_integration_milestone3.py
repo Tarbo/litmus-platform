@@ -33,6 +33,7 @@ def test_auto_transition_to_failed_when_guardrail_breaches(tmp_path):
                 ],
             ),
         )
+        experiment = ExperimentService.launch_experiment(db, experiment.id, ramp_pct=100)
 
         control_id = experiment.variants[0].id
         treatment_id = experiment.variants[1].id
