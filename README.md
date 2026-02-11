@@ -72,6 +72,42 @@ Endpoints:
 - Readiness: `http://localhost:8000/ready`
 - Metrics: `http://localhost:8000/metrics`
 
+## Python SDK Quickstart
+
+```python
+from litmus import ExperimentClient
+
+client = ExperimentClient(
+    base_url="http://localhost:8000",
+    api_key="dev-token",
+    timeout=5,
+    retries=2,
+    cache_ttl_seconds=30,
+    fail_safe_enabled=True,
+)
+
+assignment = client.get_variant(
+    experiment_id="suggested_order_v4",
+    unit_id="store-123",
+    attributes={"country": "CA"},
+)
+
+if assignment.variant_key == "treatment":
+    pass  # run treatment path
+else:
+    pass  # run control path
+
+client.log_exposure("suggested_order_v4", "store-123", assignment.variant_key)
+client.log_metric("suggested_order_v4", "store-123", assignment.variant_key, "order_value", 1250.30)
+client.flush()
+```
+
+Behavior notes:
+- `get_variant` caches assignments in-memory for the configured TTL.
+- transient backend errors are retried (`retries`).
+- when backend is unavailable, fail-safe mode returns a configurable control variant.
+- event logging is buffered and flushed either automatically at `batch_size` or via `flush()`.
+
 ## License
 
 See [LICENSE](./LICENSE) for details.
