@@ -18,6 +18,12 @@ async def request_context_middleware(request: Request, call_next):
         response = await call_next(request)
     except Exception:
         duration_ms = int((time.perf_counter() - start) * 1000)
+        request.app.state.request_metrics.record(
+            method=request.method,
+            path=request.url.path,
+            status_code=500,
+            duration_ms=duration_ms,
+        )
         logger.exception(
             json.dumps(
                 {
@@ -32,6 +38,12 @@ async def request_context_middleware(request: Request, call_next):
         raise
 
     duration_ms = int((time.perf_counter() - start) * 1000)
+    request.app.state.request_metrics.record(
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+    )
     response.headers['X-Request-ID'] = request_id
     logger.info(
         json.dumps(

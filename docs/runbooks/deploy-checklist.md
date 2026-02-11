@@ -6,4 +6,6 @@
 - [ ] `ADMIN_API_TOKENS` configured in target environment.
 - [ ] Rate limit defaults reviewed for expected traffic.
 - [ ] Rollback target commit identified.
+- [ ] `/health` and `/ready` return healthy status post deploy.
+- [ ] `/metrics` is reachable and request counters move during smoke checks.
 - [ ] Post-deploy smoke checks completed.
