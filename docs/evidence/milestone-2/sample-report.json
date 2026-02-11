@@ -1,0 +1,42 @@
+{
+  "experiment_id": "4e816fc7-1fbe-4d31-b8d6-b7ab807c300a",
+  "status": "running",
+  "mde": 0.05,
+  "sample_size_required": 1370,
+  "exposures": 2000,
+  "conversions": 240,
+  "sample_progress": 1.0,
+  "control_conversion_rate": 0.1,
+  "treatment_conversion_rate": 0.14,
+  "uplift_vs_control": 0.04,
+  "uplift_ci_lower": 0.0116,
+  "uplift_ci_upper": 0.0684,
+  "p_value": 0.005916,
+  "confidence": 0.9941,
+  "recommendation": "inconclusive",
+  "estimated_days_to_decision": 0,
+  "diff_in_diff_delta": 0.05,
+  "variant_performance": [
+    {
+      "variant_id": "907a8466-c1fb-4c4f-89f7-57fa1f9068f9",
+      "variant_name": "control",
+      "post_exposures": 1000,
+      "post_conversions": 100,
+      "post_conversion_rate": 0.1,
+      "pre_exposures": 100,
+      "pre_conversions": 10,
+      "pre_conversion_rate": 0.1
+    },
+    {
+      "variant_id": "868b9ac8-ccd5-4e3f-82d7-5783f7e8e716",
+      "variant_name": "treatment",
+      "post_exposures": 1000,
+      "post_conversions": 140,
+      "post_conversion_rate": 0.14,
+      "pre_exposures": 100,
+      "pre_conversions": 9,
+      "pre_conversion_rate": 0.09
+    }
+  ],
+  "last_updated_at": "2026-02-09T06:26:14.920907"
+}

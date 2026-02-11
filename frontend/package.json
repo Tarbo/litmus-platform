@@ -1,0 +1,15 @@
+{
+  "name": "litmus-frontend",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --port 3000",
+    "build": "nuxt build",
+    "start": "nuxt start --port 3000",
+    "preview": "nuxt preview --port 3000"
+  },
+  "dependencies": {
+    "nuxt": "^3.12.4"
+  }
+}
