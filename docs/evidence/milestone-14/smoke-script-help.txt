@@ -1,0 +1,11 @@
+usage: smoke_self_serve.py [-h] [--base-url BASE_URL] [--token TOKEN]
+                           [--unit-id UNIT_ID] [--timeout TIMEOUT]
+
+Run self-serve experimentation smoke flow.
+
+options:
+  -h, --help           show this help message and exit
+  --base-url BASE_URL  Backend base URL without /api/v1
+  --token TOKEN        Optional bearer token for write endpoints
+  --unit-id UNIT_ID    Unit id used for assignment/event checks
+  --timeout TIMEOUT    Request timeout in seconds
