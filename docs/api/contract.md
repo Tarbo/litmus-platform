@@ -161,6 +161,24 @@ Response:
 {"ingested": 1}
 ```
 
+### `POST /events`
+Ingest raw event payload (advanced usage), including explicit `conversion` events.
+
+Request:
+```json
+{
+  "experiment_id": "exp_123",
+  "user_id": "store_42",
+  "variant_id": "variant_uuid",
+  "event_type": "conversion",
+  "period": "post",
+  "value": 1.0,
+  "context_json": {"source": "simulation"}
+}
+```
+
+Response: `200` `EventResponse`.
+
 ## Results
 
 ### `GET /results/{experiment_id}?interval=hour|minute`
@@ -171,6 +189,22 @@ Return dashboard-ready aggregates:
 - `lift_estimates`
 
 Response: `200` `ExperimentResultsResponse`.
+
+### `GET /experiments/{experiment_id}/report`
+Return analysis report with recommendation, confidence, and bandit diagnostics.
+
+Includes:
+- `recommendation`
+- `confidence`
+- `variant_performance`
+- `bandit_state` (`expected_rate`, `win_probability`, posterior params)
+
+Response: `200` `ExperimentReport`.
+
+## Live updates
+
+### `GET ws://<host>/api/v1/ws/experiments/{experiment_id}/live`
+WebSocket stream that emits report snapshots every ~2 seconds for live dashboards.
 
 ## Operational endpoints
 
