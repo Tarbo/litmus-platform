@@ -56,6 +56,50 @@ litmus-platform/
 └── scripts/            # Utility scripts
 ```
 
+## Architecture
+
+```mermaid
+flowchart LR
+    User["Product / Engineer / Analyst"] --> UI["Nuxt Frontend (localhost:3000)"]
+    User --> SDK["Service or Python SDK Client"]
+
+    UI --> API["FastAPI Backend (localhost:8000/api/v1)"]
+    SDK --> API
+
+    API --> Assign["Assignment + Lifecycle Services"]
+    API --> Events["Event Ingestion API"]
+    API --> Results["Results + Analysis Services"]
+
+    Assign --> DB[("PostgreSQL + TimescaleDB")]
+    Events --> DB
+    Results --> DB
+
+    API --> WS["WebSocket Live Reports (/api/v1/ws/experiments/{id}/live)"]
+    WS --> UI
+
+    API --> Redis[("Redis Pub/Sub")]
+    API --> Workers["Celery Workers"]
+    Workers --> Redis
+    Workers --> DB
+```
+
+Data flow summary:
+- Experiment setup and lifecycle controls flow through frontend/SDK to backend experiment APIs.
+- Assignment requests return deterministic variant decisions from backend services.
+- Exposure, metric, and conversion events are ingested by backend and persisted in PostgreSQL/TimescaleDB.
+- Results/analysis endpoints compute lift, confidence, and bandit diagnostics from stored events.
+- Live updates are available via websocket report stream and near real-time polling in dashboard pages.
+
+## Tutorials
+
+Quickstart and role-based docs:
+- Self-serve quickstart: `docs/runbooks/self-serve-quickstart.md`
+- Product/owner playbook: `docs/runbooks/product-experiment-owner-playbook.md`
+- Engineer integration playbook: `docs/runbooks/engineer-integration-playbook.md`
+- Analyst decisioning playbook: `docs/runbooks/analyst-results-playbook.md`
+- Variant-only + controlled stop: `docs/runbooks/variant-only-stop-playbook.md`
+- Five-model live bandit tutorial: `docs/runbooks/live-bandit-5-model-tutorial.md`
+
 ## Run The App (Docker Compose)
 
 You can run the full stack and preview the UI now:
@@ -95,6 +139,19 @@ The smoke flow covers:
 - exposure + metric ingestion
 - results retrieval
 - pause + stop lifecycle actions
+
+## Live Bandit Tutorial Flow
+
+Run end-to-end five-model simulation and observe live convergence:
+
+```bash
+python3 scripts/live_bandit_simulation.py --base-url http://localhost:8000
+```
+
+The script prints:
+- experiment URLs for detail/results dashboard pages
+- periodic live bandit snapshots (top variant, win probability, exposures)
+- convergence signal and manual kill instructions (`stop`)
 
 ## Python SDK Quickstart
 
