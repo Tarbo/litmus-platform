@@ -150,6 +150,7 @@ This transitions status to `stopped` and blocks relaunch by lifecycle rules.
 
 Quickstart and role-based docs:
 - Self-serve quickstart: `docs/runbooks/self-serve-quickstart.md`
+- Data-scientist visual onboarding: `docs/runbooks/data-scientist-visual-onboarding.md`
 - Product/owner playbook: `docs/runbooks/product-experiment-owner-playbook.md`
 - Engineer integration playbook: `docs/runbooks/engineer-integration-playbook.md`
 - Analyst decisioning playbook: `docs/runbooks/analyst-results-playbook.md`
