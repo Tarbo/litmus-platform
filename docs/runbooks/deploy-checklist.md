@@ -1,5 +1,9 @@
 # Deploy Checklist
 
+Related tutorials:
+- `docs/runbooks/self-serve-quickstart.md`
+- `docs/runbooks/live-bandit-5-model-tutorial.md`
+
 - [ ] Backend tests pass with strict warnings.
 - [ ] SDK tests pass from `sdk` directory.
 - [ ] Frontend build succeeds.

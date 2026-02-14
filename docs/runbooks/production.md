@@ -1,5 +1,13 @@
 # Litmus Production Runbook
 
+Related onboarding docs:
+- `docs/runbooks/self-serve-quickstart.md`
+- `docs/runbooks/product-experiment-owner-playbook.md`
+- `docs/runbooks/engineer-integration-playbook.md`
+- `docs/runbooks/analyst-results-playbook.md`
+- `docs/runbooks/variant-only-stop-playbook.md`
+- `docs/runbooks/live-bandit-5-model-tutorial.md`
+
 ## 1. Pre-deploy checklist
 - Confirm CI is green (backend strict tests, sdk tests, frontend build).
 - Ensure `ADMIN_API_TOKENS` is configured with at least 2 rotated tokens.
