@@ -55,6 +55,7 @@ Flow:
 
 ## 5. Role-based tutorials
 
+- Data scientist visual onboarding: `docs/runbooks/data-scientist-visual-onboarding.md`
 - Product owner: `docs/runbooks/product-experiment-owner-playbook.md`
 - Engineer integration: `docs/runbooks/engineer-integration-playbook.md`
 - Analyst decisions: `docs/runbooks/analyst-results-playbook.md`
