@@ -20,7 +20,8 @@ def create_event(
     db: Session = Depends(get_db),
     _auth: None = Depends(require_write_access),
 ):
-    return EventService.ingest_event(db, payload)
+    event = EventService.ingest_event(db, payload)
+    return EventService.serialize_event(event)
 
 
 @router.post('/exposure', response_model=BatchIngestResponse)
