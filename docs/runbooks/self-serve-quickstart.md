@@ -4,6 +4,14 @@ Use this guide when you want to run Litmus locally and execute a full experiment
 
 ## 1. Start the platform
 
+Verify Docker daemon first:
+
+```bash
+docker info >/dev/null
+```
+
+If this fails with `Cannot connect to the Docker daemon`, start Docker Desktop (or your Docker daemon) before continuing.
+
 ```bash
 docker compose up --build
 ```

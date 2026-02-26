@@ -11,6 +11,14 @@ This tutorial runs a five-model Thompson-sampling experiment and lets you watch 
 
 ## 1. Start stack
 
+Verify Docker daemon first:
+
+```bash
+docker info >/dev/null
+```
+
+If this fails with `Cannot connect to the Docker daemon`, start Docker Desktop (or your Docker daemon) before continuing.
+
 ```bash
 docker compose up --build
 ```
