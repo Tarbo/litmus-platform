@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
@@ -42,6 +43,14 @@ def create_app(database_url: str | None = None) -> FastAPI:
         engine.dispose()
 
     application = FastAPI(title=settings.app_name, lifespan=lifespan)
+    origins = [origin.strip() for origin in settings.cors_allowed_origins.split(',') if origin.strip()]
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins or ['*'],
+        allow_credentials=False,
+        allow_methods=['*'],
+        allow_headers=['*'],
+    )
     application.middleware('http')(request_context_middleware)
     application.middleware('http')(rate_limit_middleware)
     application.add_exception_handler(HTTPException, http_exception_handler)
