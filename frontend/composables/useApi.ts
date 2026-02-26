@@ -2,7 +2,7 @@ import type { Experiment, ExperimentCreatePayload, ExperimentResultsResponse } f
 
 export const useApi = () => {
   const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase
+  const apiBase = process.server ? config.apiBaseInternal : config.public.apiBase
 
   const req = async <T>(path: string, options?: Record<string, unknown>): Promise<T> => {
     try {
