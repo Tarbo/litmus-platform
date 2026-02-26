@@ -12,6 +12,27 @@ from app.schemas.event import EventCreate, ExposureEventCreate, MetricEventCreat
 
 class EventService:
     @staticmethod
+    def serialize_event(event: Event) -> dict:
+        try:
+            context_payload = json.loads(event.context_json or '{}')
+            if not isinstance(context_payload, dict):
+                context_payload = {}
+        except json.JSONDecodeError:
+            context_payload = {}
+        return {
+            'id': event.id,
+            'experiment_id': event.experiment_id,
+            'user_id': event.user_id,
+            'variant_id': event.variant_id,
+            'event_type': event.event_type,
+            'metric_name': event.metric_name,
+            'period': event.period,
+            'value': event.value,
+            'context_json': context_payload,
+            'observed_at': event.observed_at,
+        }
+
+    @staticmethod
     def _resolve_variant(db: Session, experiment_id: str, variant_key: str) -> Variant:
         variant = db.scalar(
             select(Variant).where(
