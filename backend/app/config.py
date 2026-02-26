@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     admin_api_tokens: str = ''
     rate_limit_per_minute: int = 120
     log_level: str = 'INFO'
+    cors_allowed_origins: str = 'http://localhost:3000,http://127.0.0.1:3000'
 
 
 settings = Settings()
