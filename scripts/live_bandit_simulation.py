@@ -30,34 +30,49 @@ class HttpResult:
 
 
 class ApiClient:
-    def __init__(self, base_url: str, token: str | None = None, timeout: int = 10):
+    def __init__(
+        self,
+        base_url: str,
+        token: str | None = None,
+        timeout: int = 10,
+        max_429_retries: int = 20,
+        retry_backoff_ms: int = 500,
+    ):
         self.base_url = base_url.rstrip('/')
         self.token = token
         self.timeout = timeout
+        self.max_429_retries = max_429_retries
+        self.retry_backoff_ms = retry_backoff_ms
 
     def request(self, method: str, path: str, payload: dict | list | None = None) -> HttpResult:
-        data = None
-        headers = {'Content-Type': 'application/json'}
-        if self.token:
-            headers['Authorization'] = f'Bearer {self.token}'
-        if payload is not None:
-            data = json.dumps(payload).encode('utf-8')
+        for attempt in range(self.max_429_retries + 1):
+            data = None
+            headers = {'Content-Type': 'application/json'}
+            if self.token:
+                headers['Authorization'] = f'Bearer {self.token}'
+            if payload is not None:
+                data = json.dumps(payload).encode('utf-8')
 
-        req = urllib.request.Request(
-            url=f'{self.base_url}{path}',
-            data=data,
-            method=method,
-            headers=headers,
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as response:
-                raw = response.read().decode('utf-8')
-                return HttpResult(status=response.status, payload=json.loads(raw) if raw else {})
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode('utf-8')
-            raise RuntimeError(f'HTTP {exc.code} {path}: {detail}') from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f'Network error for {path}: {exc.reason}') from exc
+            req = urllib.request.Request(
+                url=f'{self.base_url}{path}',
+                data=data,
+                method=method,
+                headers=headers,
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as response:
+                    raw = response.read().decode('utf-8')
+                    return HttpResult(status=response.status, payload=json.loads(raw) if raw else {})
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode('utf-8')
+                if exc.code == 429 and attempt < self.max_429_retries:
+                    sleep_s = (self.retry_backoff_ms / 1000.0) * (attempt + 1)
+                    time.sleep(sleep_s)
+                    continue
+                raise RuntimeError(f'HTTP {exc.code} {path}: {detail}') from exc
+            except urllib.error.URLError as exc:
+                raise RuntimeError(f'Network error for {path}: {exc.reason}') from exc
+        raise RuntimeError(f'HTTP 429 {path}: retries exhausted')
 
 
 def _print(label: str, payload: Any) -> None:
@@ -88,6 +103,8 @@ def main() -> int:
     parser.add_argument('--sleep-ms', type=int, default=0, help='Optional sleep between iterations to slow event stream')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for deterministic local runs')
     parser.add_argument('--auto-stop', action='store_true', help='Automatically stop experiment when converged')
+    parser.add_argument('--max-429-retries', type=int, default=20, help='Max retries for 429 rate-limit responses')
+    parser.add_argument('--retry-backoff-ms', type=int, default=500, help='Backoff per retry step for 429 responses')
     args = parser.parse_args()
 
     if args.iterations <= 0:
@@ -97,7 +114,12 @@ def main() -> int:
 
     reward_rates = _parse_reward_rates(args.reward_rates)
     rng = random.Random(args.seed)
-    client = ApiClient(base_url=args.base_url, token=args.token)
+    client = ApiClient(
+        base_url=args.base_url,
+        token=args.token,
+        max_429_retries=args.max_429_retries,
+        retry_backoff_ms=args.retry_backoff_ms,
+    )
 
     health = client.request('GET', '/health')
     if health.status != 200:
