@@ -161,6 +161,14 @@ Quickstart and role-based docs:
 
 You can run the full stack and preview the UI now:
 
+Preflight check (required once per shell session):
+
+```bash
+docker info >/dev/null
+```
+
+If that command fails with `Cannot connect to the Docker daemon`, start Docker Desktop (or your Docker daemon) and rerun it.
+
 ```bash
 docker compose up --build
 ```
@@ -179,6 +187,7 @@ Frontend runtime config:
 
 1. Start stack:
 ```bash
+docker info >/dev/null
 docker compose up --build
 ```
 2. Open UI:
