@@ -1,4 +1,11 @@
-import type { Experiment, ExperimentCreatePayload, ExperimentResultsResponse } from '~/types'
+import type {
+  CondensedPerformance,
+  Experiment,
+  ExperimentCreatePayload,
+  ExperimentReport,
+  ExperimentResultsResponse,
+  GuardrailMetric,
+} from '~/types'
 
 export const useApi = () => {
   const config = useRuntimeConfig()
@@ -25,6 +32,8 @@ export const useApi = () => {
     getExperiment: (id: string) => req<Experiment>(`/experiments/${id}`),
     createExperiment: (payload: ExperimentCreatePayload) =>
       req<Experiment>('/experiments', { method: 'POST', body: payload }),
+    listRunningExperiments: () => req<CondensedPerformance[]>('/experiments/running'),
+    getExperimentReport: (id: string) => req<ExperimentReport>(`/experiments/${id}/report`),
     patchExperiment: (id: string, payload: Partial<ExperimentCreatePayload>) =>
       req<Experiment>(`/experiments/${id}`, { method: 'PATCH', body: payload }),
     launchExperiment: (id: string, rampPct?: number) =>
@@ -34,6 +43,7 @@ export const useApi = () => {
       }),
     pauseExperiment: (id: string) => req<Experiment>(`/experiments/${id}/pause`, { method: 'POST', body: {} }),
     stopExperiment: (id: string) => req<Experiment>(`/experiments/${id}/stop`, { method: 'POST', body: {} }),
+    listGuardrails: (experimentId: string) => req<GuardrailMetric[]>(`/metrics/guardrails/${experimentId}`),
     getResults: (id: string, interval: 'minute' | 'hour' = 'hour') =>
       req<ExperimentResultsResponse>(`/results/${id}?interval=${interval}`),
   }

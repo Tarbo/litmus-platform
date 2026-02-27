@@ -24,6 +24,64 @@ export interface Experiment {
   variants: Variant[]
 }
 
+export interface CondensedPerformance {
+  experiment_id: string
+  name: string
+  status: ExperimentStatus
+  exposures: number
+  conversions: number
+  conversion_rate: number
+  uplift_vs_control: number
+  confidence: number
+  sample_progress: number
+}
+
+export interface GuardrailMetric {
+  id: string
+  experiment_id: string
+  name: string
+  value: number
+  threshold_value: number
+  direction: string
+  status: string
+  observed_at: string
+}
+
+export interface ExperimentReport {
+  experiment_id: string
+  status: ExperimentStatus
+  mde: number
+  sample_size_required: number
+  exposures: number
+  conversions: number
+  sample_progress: number
+  control_conversion_rate: number
+  treatment_conversion_rate: number
+  uplift_vs_control: number
+  uplift_ci_lower: number
+  uplift_ci_upper: number
+  p_value: number
+  confidence: number
+  recommendation: string
+  guardrails_breached: number
+  guardrails: Array<Record<string, unknown>>
+  estimated_days_to_decision: number | null
+  diff_in_diff_delta: number | null
+  variant_performance: Array<Record<string, unknown>>
+  assignment_policy: string
+  bandit_state: Array<{
+    variant_id: string
+    variant_name: string
+    exposures: number
+    conversions: number
+    alpha: number
+    beta: number
+    expected_rate: number
+    win_probability: number
+  }>
+  last_updated_at: string
+}
+
 export interface ExperimentCreatePayload {
   name: string
   description: string
